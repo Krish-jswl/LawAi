@@ -2,12 +2,10 @@
 
 import { useEffect, useRef, useCallback, useTransition } from "react";
 import { useState } from "react";
+import FileUpload from "./file-upload";
+import { Button } from "@/components/ui/flow-hover-button";
 import { cn } from "@/lib/utils";
 import {
-    ImageIcon,
-    FileUp,
-    Figma,
-    MonitorIcon,
     CircleUserRound,
     ArrowUpIcon,
     Paperclip,
@@ -16,7 +14,6 @@ import {
     XIcon,
     LoaderIcon,
     Sparkles,
-    Command,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react"
@@ -72,12 +69,7 @@ function useAutoResizeTextarea({
     return { textareaRef, adjustHeight };
 }
 
-interface CommandSuggestion {
-    icon: React.ReactNode;
-    label: string;
-    description: string;
-    prefix: string;
-}
+
 
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -134,67 +126,21 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 )
 Textarea.displayName = "Textarea"
 
-export function AnimatedAIChat() {
+export function AnimatedAIChat({ onFileAttached, initialAttachedFiles = [] }: { onFileAttached?: (file: File) => void, initialAttachedFiles?: File[] }) {
     const [value, setValue] = useState("");
-    const [attachments, setAttachments] = useState<string[]>([]);
+    const [attachedFiles, setAttachedFiles] = useState<File[]>(initialAttachedFiles);
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [response, setResponse] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
-    const [activeSuggestion, setActiveSuggestion] = useState<number>(-1);
-    const [showCommandPalette, setShowCommandPalette] = useState(false);
-    const [recentCommand, setRecentCommand] = useState<string | null>(null);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
         minHeight: 60,
         maxHeight: 200,
     });
     const [inputFocused, setInputFocused] = useState(false);
-    const commandPaletteRef = useRef<HTMLDivElement>(null);
 
-    const commandSuggestions: CommandSuggestion[] = [
-        { 
-            icon: <ImageIcon className="w-4 h-4" />, 
-            label: "Clone UI", 
-            description: "Generate a UI from a screenshot", 
-            prefix: "/clone" 
-        },
-        { 
-            icon: <Figma className="w-4 h-4" />, 
-            label: "Import Figma", 
-            description: "Import a design from Figma", 
-            prefix: "/figma" 
-        },
-        { 
-            icon: <MonitorIcon className="w-4 h-4" />, 
-            label: "Create Page", 
-            description: "Generate a new web page", 
-            prefix: "/page" 
-        },
-        { 
-            icon: <Sparkles className="w-4 h-4" />, 
-            label: "Improve", 
-            description: "Improve existing UI design", 
-            prefix: "/improve" 
-        },
-    ];
 
-    useEffect(() => {
-        if (value.startsWith('/') && !value.includes(' ')) {
-            setShowCommandPalette(true);
-            
-            const matchingSuggestionIndex = commandSuggestions.findIndex(
-                (cmd) => cmd.prefix.startsWith(value)
-            );
-            
-            if (matchingSuggestionIndex >= 0) {
-                setActiveSuggestion(matchingSuggestionIndex);
-            } else {
-                setActiveSuggestion(-1);
-            }
-        } else {
-            setShowCommandPalette(false);
-        }
-    }, [value]);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -207,51 +153,10 @@ export function AnimatedAIChat() {
         };
     }, []);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
-            const commandButton = document.querySelector('[data-command-button]');
-            
-            if (commandPaletteRef.current && 
-                !commandPaletteRef.current.contains(target) && 
-                !commandButton?.contains(target)) {
-                setShowCommandPalette(false);
-            }
-        };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (showCommandPalette) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setActiveSuggestion(prev => 
-                    prev < commandSuggestions.length - 1 ? prev + 1 : 0
-                );
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setActiveSuggestion(prev => 
-                    prev > 0 ? prev - 1 : commandSuggestions.length - 1
-                );
-            } else if (e.key === 'Tab' || e.key === 'Enter') {
-                e.preventDefault();
-                if (activeSuggestion >= 0) {
-                    const selectedCommand = commandSuggestions[activeSuggestion];
-                    setValue(selectedCommand.prefix + ' ');
-                    setShowCommandPalette(false);
-                    
-                    setRecentCommand(selectedCommand.label);
-                    setTimeout(() => setRecentCommand(null), 3500);
-                }
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setShowCommandPalette(false);
-            }
-        } else if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             if (value.trim()) {
                 handleSendMessage();
@@ -275,22 +180,14 @@ export function AnimatedAIChat() {
     };
 
     const handleAttachFile = () => {
-        const mockFileName = `file-${Math.floor(Math.random() * 1000)}.pdf`;
-        setAttachments(prev => [...prev, mockFileName]);
+        setUploadModalOpen(true);
     };
 
     const removeAttachment = (index: number) => {
-        setAttachments(prev => prev.filter((_, i) => i !== index));
+        setAttachedFiles(prev => prev.filter((_, i) => i !== index));
     };
     
-    const selectCommandSuggestion = (index: number) => {
-        const selectedCommand = commandSuggestions[index];
-        setValue(selectedCommand.prefix + ' ');
-        setShowCommandPalette(false);
-        
-        setRecentCommand(selectedCommand.label);
-        setTimeout(() => setRecentCommand(null), 2000);
-    };
+
 
     return (
         <div className="min-h-screen flex flex-col w-full items-center justify-center bg-transparent text-white p-6 relative overflow-hidden">
@@ -356,44 +253,7 @@ export function AnimatedAIChat() {
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.1 }}
                     >
-                        <AnimatePresence>
-                            {showCommandPalette && (
-                                <motion.div 
-                                    ref={commandPaletteRef}
-                                    className="absolute left-4 right-4 bottom-full mb-2 backdrop-blur-xl bg-black/90 rounded-lg z-50 shadow-lg border border-white/10 overflow-hidden"
-                                    initial={{ opacity: 0, y: 5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 5 }}
-                                    transition={{ duration: 0.15 }}
-                                >
-                                    <div className="py-1 bg-black/95">
-                                        {commandSuggestions.map((suggestion, index) => (
-                                            <motion.div
-                                                key={suggestion.prefix}
-                                                className={cn(
-                                                    "flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
-                                                    activeSuggestion === index 
-                                                        ? "bg-white/10 text-white" 
-                                                        : "text-white/70 hover:bg-white/5"
-                                                )}
-                                                onClick={() => selectCommandSuggestion(index)}
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ delay: index * 0.03 }}
-                                            >
-                                                <div className="w-5 h-5 flex items-center justify-center text-white/60">
-                                                    {suggestion.icon}
-                                                </div>
-                                                <div className="font-medium">{suggestion.label}</div>
-                                                <div className="text-white/40 text-xs ml-1">
-                                                    {suggestion.prefix}
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+
 
                         <div className="p-4">
                             <Textarea
@@ -426,14 +286,14 @@ export function AnimatedAIChat() {
                         </div>
 
                         <AnimatePresence>
-                            {attachments.length > 0 && (
+                            {attachedFiles.length > 0 && (
                                 <motion.div 
                                     className="px-4 pb-3 flex gap-2 flex-wrap"
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: "auto" }}
                                     exit={{ opacity: 0, height: 0 }}
                                 >
-                                    {attachments.map((file, index) => (
+                                    {attachedFiles.map((file, index) => (
                                         <motion.div
                                             key={index}
                                             className="flex items-center gap-2 text-xs bg-white/[0.03] py-1.5 px-3 rounded-lg text-white/70"
@@ -441,7 +301,7 @@ export function AnimatedAIChat() {
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.9 }}
                                         >
-                                            <span>{file}</span>
+                                            <span className="max-w-[150px] truncate">{file.name}</span>
                                             <button 
                                                 onClick={() => removeAttachment(index)}
                                                 className="text-white/40 hover:text-white transition-colors"
@@ -463,25 +323,6 @@ export function AnimatedAIChat() {
                                     className="p-2 text-white/40 hover:text-white/90 rounded-lg transition-colors relative group"
                                 >
                                     <Paperclip className="w-4 h-4" />
-                                    <motion.span
-                                        className="absolute inset-0 bg-white/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                        layoutId="button-highlight"
-                                    />
-                                </motion.button>
-                                <motion.button
-                                    type="button"
-                                    data-command-button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowCommandPalette(prev => !prev);
-                                    }}
-                                    whileTap={{ scale: 0.94 }}
-                                    className={cn(
-                                        "p-2 text-white/40 hover:text-white/90 rounded-lg transition-colors relative group",
-                                        showCommandPalette && "bg-white/10 text-white/90"
-                                    )}
-                                >
-                                    <Command className="w-4 h-4" />
                                     <motion.span
                                         className="absolute inset-0 bg-white/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                         layoutId="button-highlight"
@@ -513,32 +354,15 @@ export function AnimatedAIChat() {
                         </div>
                     </motion.div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                        {commandSuggestions.map((suggestion, index) => (
-                            <motion.button
-                                key={suggestion.prefix}
-                                onClick={() => selectCommandSuggestion(index)}
-                                className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
-                                {suggestion.icon}
-                                <span>{suggestion.label}</span>
-                                <motion.div
-                                    className="absolute inset-0 border border-white/[0.05] rounded-lg"
-                                    initial={false}
-                                    animate={{
-                                        opacity: [0, 1],
-                                        scale: [0.98, 1],
-                                    }}
-                                    transition={{
-                                        duration: 0.3,
-                                        ease: "easeOut",
-                                    }}
-                                />
-                            </motion.button>
-                        ))}
+                    <div className="flex justify-center mt-4">
+                        <Button 
+                            icon={<Sparkles className="w-4 h-4" />}
+                            onClick={() => {
+                                console.log("Convert to Action clicked")
+                            }}
+                        >
+                            Convert to Action
+                        </Button>
                     </div>
                 </motion.div>
             </div>
@@ -578,6 +402,45 @@ export function AnimatedAIChat() {
                         mass: 0.5,
                     }}
                 />
+            )}
+
+            {uploadModalOpen && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" 
+                    onClick={() => setUploadModalOpen(false)}
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="w-full max-w-xl bg-[#0A0A0B] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden"
+                    >
+                        <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <h3 className="text-white/90 font-medium">Upload Documents</h3>
+                            <button 
+                                onClick={() => setUploadModalOpen(false)} 
+                                className="p-1 text-white/50 hover:text-white/90 hover:bg-white/5 rounded-full transition-colors"
+                            >
+                                <XIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-2">
+                            <FileUpload 
+                                onFilesSelected={(files) => {
+                                    setAttachedFiles(prev => {
+                                        // Prevent duplicates
+                                        const uniqueFiles = files.filter(f => !prev.some(p => p.name === f.name && p.size === f.size));
+                                        return [...prev, ...uniqueFiles];
+                                    });
+                                    // Trigger layout swap if provided (only uses first file for transition)
+                                    if (files.length > 0 && onFileAttached) {
+                                        onFileAttached(files[0]);
+                                    }
+                                    // Close after brief delay for UX
+                                    setTimeout(() => setUploadModalOpen(false), 800);
+                                }} 
+                            />
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

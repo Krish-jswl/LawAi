@@ -6,7 +6,6 @@ import { ArrowRightIcon } from "lucide-react";
 import { Mockup, MockupFrame } from "@/components/ui/mockup";
 import { Glow } from "@/components/ui/glow";
 import Image from "next/image";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 interface HeroAction {
@@ -14,6 +13,7 @@ interface HeroAction {
   href: string;
   icon?: React.ReactNode;
   variant?: "default" | "glow";
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 interface HeroProps {
@@ -41,15 +41,13 @@ export function HeroSection({
   actions,
   image,
 }: HeroProps) {
-  const { resolvedTheme } = useTheme();
-  const imageSrc = resolvedTheme === "light" ? image.light : image.dark;
 
   return (
     <section
       className={cn(
         "bg-background text-foreground",
         "py-12 sm:py-24 md:py-32 px-4",
-        "fade-bottom overflow-hidden pb-0"
+        "overflow-hidden"
       )}
     >
       <div className="mx-auto flex max-w-container flex-col gap-12 pt-16 sm:gap-24">
@@ -80,7 +78,11 @@ export function HeroSection({
             <div className="relative z-10 flex animate-appear justify-center gap-4 opacity-0 delay-300">
               {actions.map((action, index) => (
                 <Button key={index} variant={action.variant} size="lg" asChild>
-                  <a href={action.href} className="flex items-center gap-2">
+                  <a
+                    href={action.href}
+                    className="flex items-center gap-2"
+                    onClick={action.onClick ? (e) => { e.preventDefault(); action.onClick!(e); } : undefined}
+                  >
                     {action.icon}
                     {action.text}
                   </a>
@@ -89,26 +91,149 @@ export function HeroSection({
             </div>
           </div>
 
-          {/* Image with Glow */}
-          <div className="relative pt-12">
-            <MockupFrame
-              className="animate-appear opacity-0 delay-700"
-              size="small"
-            >
-              <Mockup type="responsive">
-                <Image
-                  src={imageSrc}
-                  alt={image.alt}
-                  width={1248}
-                  height={765}
-                  priority
-                />
-              </Mockup>
-            </MockupFrame>
-            <Glow
-              variant="top"
-              className="animate-appear-zoom opacity-0 delay-1000"
-            />
+          {/* Feature Sections */}
+          <div className="relative pt-16 w-full max-w-7xl mx-auto space-y-12 pb-16 px-4">
+            {/* Feature 1: Interactive Advisory */}
+            <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                {/* Left Image */}
+                <div className="w-full md:w-1/3 shrink-0">
+                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                    <Image
+                      src="/chat-screenshot.png"
+                      alt="Interactive Advisory Chat"
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Text Content */}
+                <div className="w-full md:w-2/3 text-left">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+                    Interactive advisory
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-zinc-600 font-normal">
+                    You do not need a formal document or contract to begin your journey; simply arrive at the global intake and describe your legal problem or situation in plain text. The system immediately opens an interactive chat environment where you can seek high-level advice and get a clear understanding of your legal standing.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 2: Cognitive Document Analysis */}
+            <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                {/* Left Text Content */}
+                <div className="w-full md:w-2/3 text-left">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+                    Cognitive document analysis
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-zinc-600 font-normal">
+                    Upload any legal document, and our AI immediately creates a secure, split-screen environment. Ask &quot;What-If&quot; scenarios, and get instant calculations on your financial and legal risks, with the AI&apos;s context limited strictly to that document for total accuracy.
+                  </p>
+                </div>
+
+                {/* Right Image */}
+                <div className="w-full md:w-1/3 shrink-0 flex justify-end">
+                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                    <Image
+                      src="/rock.png"
+                      alt="Feature illustration"
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 3: Convert to Action Method */}
+            <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                {/* Left Image */}
+                <div className="w-full md:w-1/3 shrink-0">
+                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                    <Image
+                      src="/rock.png"
+                      alt="Feature illustration"
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Text Content */}
+                <div className="w-full md:w-2/3 text-left">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+                    &quot;Convert to Action&quot; Method
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-zinc-600 font-normal">
+                    When you are done understanding the risks, click one button to stop talking and start executing. This method transitions you instantly from the &quot;Advisory&quot; path to the &quot;Action&quot; path, plotting a strategic, step-by-step legal timeline on your dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 4: Triage & Severity Routing */}
+            <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                {/* Left Text Content */}
+                <div className="w-full md:w-2/3 text-left">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+                    Triage &amp; Severity Routing
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-zinc-600 font-normal">
+                    Our Triage Agent analyzes your crisis to calculate a Severity Score. Civil and everyday issues are routed to <em>Executor Mode</em> for autonomous execution of notice drafting, while criminal or serious threats are routed to <em>Navigator Mode</em> for safety-first guidance and offline paperwork generation.
+                  </p>
+                </div>
+
+                {/* Right Image */}
+                <div className="w-full md:w-1/3 shrink-0 flex justify-end">
+                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                    <Image
+                      src="/rock.png"
+                      alt="Feature illustration"
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 5: Autonomous Escalation Tracking */}
+            <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                {/* Left Image */}
+                <div className="w-full md:w-1/3 shrink-0">
+                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                    <Image
+                      src="/rock.png"
+                      alt="Feature illustration"
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Text Content */}
+                <div className="w-full md:w-2/3 text-left">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
+                    Autonomous Escalation Tracking (Human-in-the-Loop)
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-zinc-600 font-normal">
+                    Never miss a legal deadline again. When the AI executes a legal notice on your behalf, a persistent background timer starts. If the offending party ignores the deadline, AI automatically wakes up, flags the failure, and drafts the next stage of legal escalation, pinging you for final &quot;Human-in-the-Loop&quot; approval to fire it off.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Future feature blocks can be stacked here */}
           </div>
         </div>
       </div>

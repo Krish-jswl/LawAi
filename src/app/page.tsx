@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Header } from "@/components/ui/header-01";
 import { HeroSection } from "@/components/blocks/hero-section";
-import { Icons } from "@/components/ui/icons";
+import LoginCardSection from "@/components/ui/login-signup";
 
 export default function Home() {
+  const [showLogin, setShowLogin] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen w-full overflow-hidden">
       <Header />
@@ -14,15 +17,10 @@ export default function Home() {
           description="Upload any legal document. We don't just summarize—we audit risks, simulate &quot;what-if&quot; scenarios, and execute legal pushback on your behalf."
           actions={[
             {
-              text: "Get Started",
-              href: "/docs/getting-started",
+              text: "Login",
+              href: "/analysis",
               variant: "default",
-            },
-            {
-              text: "GitHub",
-              href: "https://github.com/your-repo",
-              variant: "glow",
-              icon: <Icons.gitHub className="h-5 w-5" />,
+              onClick: () => setShowLogin(true),
             },
           ]}
           image={{
@@ -32,6 +30,10 @@ export default function Home() {
           }}
         />
       </main>
+
+      {showLogin && (
+        <LoginCardSection onClose={() => setShowLogin(false)} />
+      )}
     </div>
   );
 }

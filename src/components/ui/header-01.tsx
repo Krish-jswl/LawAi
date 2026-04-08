@@ -2,6 +2,7 @@
 
 import { Menu, X, Moon, Sun, Scale } from "lucide-react";
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -41,8 +42,7 @@ const Header = () => {
       <nav
         data-state={menuState && "active"}
         className={cn(
-          "fixed z-50 w-full px-3 md:px-4 transition-colors duration-300",
-          isScrolled ? "border-transparent" : "border-b"
+          "fixed z-50 w-full px-3 md:px-4 transition-colors duration-300 border-transparent"
         )}
       >
         <div
@@ -54,16 +54,16 @@ const Header = () => {
         >
           <div className="relative flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="flex w-full justify-between lg:w-auto">
-              <a
-                href="#"
+              <Link
+                href="/"
                 aria-label="home"
-                className="flex gap-2 items-center"
+                className="flex gap-2 items-center cursor-pointer hover:opacity-80 transition"
               >
                 <Scale className="h-7 w-7 text-brand" />
                 <span className="text-lg font-bold tracking-tight">
                   Law<span className="text-brand">AI</span>
                 </span>
-              </a>
+              </Link>
               <div className="flex gap-2">
                 <button
                   onClick={() => setMenuState(!menuState)}
@@ -112,15 +112,6 @@ const Header = () => {
               </div>
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-2 sm:space-y-0">
                 <ModeToggle />
-                <Button
-                  variant={"secondary"}
-                  asChild
-                  className={cn(isScrolled && "lg:hidden")}
-                >
-                  <a href="#">
-                    <span>Get Early Access</span>
-                  </a>
-                </Button>
               </div>
             </div>
           </div>
