@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add a dark background to the whole body just to be safe */
+body {
+    @apply bg-neutral-950;
+}
