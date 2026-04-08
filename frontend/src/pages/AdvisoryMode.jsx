@@ -6,7 +6,7 @@ export default function AdvisoryMode() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [pdfUrl, setPdfUrl] = useState(null);
     const [chatHistory, setChatHistory] = useState([
-        { role: 'assistant', content: 'Upload a legal document to begin analysis.' }
+        { role: 'assistant', content: 'Describe your legal issue below, or upload a document/image to begin analysis.' }
     ]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -20,23 +20,18 @@ export default function AdvisoryMode() {
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
+        if (file && (file.type === 'application/pdf' || file.type.startsWith('image/'))) {
             setSelectedFile(file);
             setPdfUrl(URL.createObjectURL(file));
-            setChatHistory([{ role: 'assistant', content: 'Document loaded. What specific risks or clauses would you like me to analyze?' }]);
+            setChatHistory([{ role: 'assistant', content: 'File loaded. What specific risks or clauses would you like me to analyze?' }]);
         } else {
-            alert("Please upload a valid PDF document.");
+            alert("Please upload a valid PDF or Image document.");
         }
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!inputText.trim()) return;
-        if (!selectedFile) {
-            setChatHistory(prev => [...prev, { role: 'user', content: inputText }, { role: 'assistant', content: 'System Error: No document context found. Please upload a PDF first.' }]);
-            setInputText('');
-            return;
-        }
 
         const userMessage = inputText;
         setInputText('');
@@ -86,13 +81,13 @@ export default function AdvisoryMode() {
                             <div className="border border-dashed border-neutral-800 rounded-lg p-12 w-full max-w-md bg-neutral-900/50 hover:bg-neutral-900 transition-colors group cursor-pointer relative">
                                 <input
                                     type="file"
-                                    accept="application/pdf"
+                                    accept="application/pdf, image/png, image/jpeg, image/jpg"
                                     onChange={handleFileUpload}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <UploadCloud className="w-10 h-10 mx-auto mb-4 text-neutral-500 group-hover:text-neutral-400 transition-colors" />
-                                <h3 className="text-neutral-300 font-medium mb-1">Select or drop a legal document</h3>
-                                <p className="text-sm text-neutral-600">Strictly .pdf formats supported</p>
+                                <h3 className="text-neutral-300 font-medium mb-1">Upload a legal document or photo</h3>
+                                <p className="text-sm text-neutral-600">Supported formats: .pdf, .png, .jpg, .jpeg</p>
                             </div>
                         </div>
                     ) : (
@@ -114,8 +109,8 @@ export default function AdvisoryMode() {
                         {chatHistory.map((msg, index) => (
                             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] rounded-md p-4 text-sm leading-relaxed ${msg.role === 'user'
-                                        ? 'bg-neutral-800 text-neutral-100 border border-neutral-700'
-                                        : 'bg-transparent border border-neutral-900 text-neutral-300 prose prose-invert prose-sm max-w-none'
+                                    ? 'bg-neutral-800 text-neutral-100 border border-neutral-700'
+                                    : 'bg-transparent border border-neutral-900 text-neutral-300 prose prose-invert prose-sm max-w-none'
                                     }`}>
                                     {msg.role === 'assistant' && <FileText className="w-4 h-4 mb-2 text-neutral-500 inline-block mr-2" />}
                                     {msg.role === 'assistant' ? (
@@ -144,7 +139,7 @@ export default function AdvisoryMode() {
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
-                                placeholder={selectedFile ? "Query this document..." : "Upload a document first..."}
+                                placeholder={selectedFile ? "Query this document..." : "Describe your legal issue or upload a file..."}
                                 disabled={isLoading}
                                 rows={1}
                                 className="w-full bg-neutral-900 border border-neutral-800 rounded-md py-3 px-4 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 focus:ring-1 focus:ring-neutral-600 resize-none min-h-[50px] max-h-[150px]"
