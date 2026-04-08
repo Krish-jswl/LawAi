@@ -18,11 +18,13 @@ router.post('/analyze', upload.single('document'), async (req, res) => {
         const fileBuffer = file ? file.buffer : null;
         const mimeType = file ? file.mimetype : null;
 
-        const answer = await analyzeDocument(userQuestion, fileBuffer, mimeType);
+        // Update the response block:
+        const result = await analyzeDocument(userQuestion, fileBuffer, mimeType);
 
         res.json({
             status: "success",
-            answer: answer
+            answer: result.answer, // The AI's response
+            documentText: result.extractedText || null // The raw PDF text (if a file was uploaded)
         });
 
     } catch (error) {

@@ -96,7 +96,11 @@ export async function analyzeDocument(userQuestion, fileBuffer, mimeType) {
             temperature: 0.1,
         });
 
-        return chatCompletion.choices[0].message.content;
+        // Change your return statement at the bottom of the PDF section:
+        return {
+            answer: chatCompletion.choices[0].message.content,
+            extractedText: documentText // Pass the raw text back!
+        };
     }
 
     throw new Error("Unsupported file type. Please upload a PDF or an Image.");

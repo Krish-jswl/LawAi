@@ -4,7 +4,7 @@ import 'dotenv/config'; // Automatically loads your .env file
 
 // Import your routes
 import chatRoutes from './routes/chat.routes.js';
-
+import executeRoutes from './routes/execute.routes.js';
 const app = express();
 
 // --- Middleware ---
@@ -21,6 +21,7 @@ app.use(express.json());
 // --- Routes ---
 // Mount the chat routes under the /api/chat prefix
 app.use('/api/chat', chatRoutes);
+app.use('/api/execute', executeRoutes);
 
 // A simple health check route to verify the server is up
 app.get('/health', (req, res) => {

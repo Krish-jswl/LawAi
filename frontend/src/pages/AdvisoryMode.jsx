@@ -1,8 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, Send, FileText, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../api/supabaseClient'; // Ensure you created this file!
 
 export default function AdvisoryMode() {
+    const navigate = useNavigate();
+
+    // State Management
     const [selectedFile, setSelectedFile] = useState(null);
     const [pdfUrl, setPdfUrl] = useState(null);
     const [chatHistory, setChatHistory] = useState([
@@ -10,6 +15,9 @@ export default function AdvisoryMode() {
     ]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isTriaging, setIsTriaging] = useState(false);
+    const [caseId, setCaseId] = useState(null); // Supabase tracking ID
+
     const messagesEndRef = useRef(null);
 
     // Auto-scroll to bottom of chat
@@ -35,14 +43,18 @@ export default function AdvisoryMode() {
 
         const userMessage = inputText;
         setInputText('');
-        setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
+
+        // 1. Update UI immediately
+        const updatedChatForUser = [...chatHistory, { role: 'user', content: userMessage }];
+        setChatHistory(updatedChatForUser);
         setIsLoading(true);
 
         const formData = new FormData();
-        formData.append('document', selectedFile);
+        if (selectedFile) formData.append('document', selectedFile);
         formData.append('question', userMessage);
 
         try {
+            // 2. Get AI Response
             const response = await fetch('/api/chat/analyze', {
                 method: 'POST',
                 body: formData,
@@ -50,16 +62,99 @@ export default function AdvisoryMode() {
 
             const data = await response.json();
 
-            if (data.status === 'success') {
-                setChatHistory(prev => [...prev, { role: 'assistant', content: data.answer }]);
-            } else {
-                setChatHistory(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}` }]);
+            // 3. Compile the final chat array
+            const finalChatHistory = data.status === 'success'
+                ? [...updatedChatForUser, { role: 'assistant', content: data.answer }]
+                : [...updatedChatForUser, { role: 'assistant', content: `Error: ${data.error}` }];
+
+            setChatHistory(finalChatHistory);
+
+            // 4. Supabase Sync (Memory Track)
+
+            // 4a. Prepare the payload dynamically
+            const dbPayload = { chat_history: finalChatHistory };
+
+            // 4b. If the backend sent us document text, attach it to the payload!
+            if (data.documentText) {
+                dbPayload.document_text = data.documentText;
             }
+
+            if (!caseId) {
+                // First message? Create a new case
+                const { data: newCase, error } = await supabase
+                    .from('cases')
+                    .insert([dbPayload])
+                    .select()
+                    .single();
+
+                if (error) console.error("Supabase Insert Error:", error);
+                if (newCase) setCaseId(newCase.id);
+            } else {
+                // Existing case? Update the chat array AND the document text if we just received it
+                const { error } = await supabase
+                    .from('cases')
+                    .update(dbPayload)
+                    .eq('id', caseId);
+
+                if (error) console.error("Supabase Update Error:", error);
+            }
+
         } catch (error) {
             console.error("API Error:", error);
             setChatHistory(prev => [...prev, { role: 'assistant', content: 'Network failure: Unable to reach the KALPA AI orchestration server.' }]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleConvertToAction = async () => {
+        // Prevent clicking if there is no chat history to analyze
+        if (chatHistory.length <= 1) {
+            alert("Please describe your issue or chat with KALPA before converting to an action path.");
+            return;
+        }
+
+        setIsTriaging(true);
+
+        // Compile the chat history
+        const conversationTranscript = chatHistory
+            .map(msg => `${msg.role}: ${msg.content}`)
+            .join('\n');
+
+        try {
+            // Send to the Triage API
+            const response = await fetch('/api/execute/triage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ context: conversationTranscript })
+            });
+
+            if (!response.ok) throw new Error("Triage API failed");
+
+            const triageData = await response.json();
+
+            // Bifurcation Routing
+            if (triageData.severity === 'civil') {
+                navigate('/executor', {
+                    state: {
+                        entity: triageData.entity,
+                        fullContext: conversationTranscript,
+                        caseId: caseId // Pass the case ID to the next screen!
+                    }
+                });
+            } else {
+                navigate('/navigator', {
+                    state: {
+                        fullContext: conversationTranscript,
+                        caseId: caseId
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Triage routing failed:", error);
+            alert("Failed to analyze the action path. Please ensure the backend triage route is running.");
+        } finally {
+            setIsTriaging(false);
         }
     };
 
@@ -92,11 +187,19 @@ export default function AdvisoryMode() {
                         </div>
                     ) : (
                         <div className="flex-1 w-full h-full bg-neutral-900 p-4">
-                            <iframe
-                                src={pdfUrl}
-                                title="Legal Document Viewer"
-                                className="w-full h-full border border-neutral-800 rounded-sm bg-white"
-                            />
+                            {selectedFile.type.startsWith('image/') ? (
+                                <img
+                                    src={pdfUrl}
+                                    alt="Uploaded Document"
+                                    className="w-full h-full object-contain border border-neutral-800 rounded-sm bg-neutral-900"
+                                />
+                            ) : (
+                                <iframe
+                                    src={pdfUrl}
+                                    title="Legal Document Viewer"
+                                    className="w-full h-full border border-neutral-800 rounded-sm bg-white"
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -140,21 +243,26 @@ export default function AdvisoryMode() {
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
                                 placeholder={selectedFile ? "Query this document..." : "Describe your legal issue or upload a file..."}
-                                disabled={isLoading}
+                                disabled={isLoading || isTriaging}
                                 rows={1}
                                 className="w-full bg-neutral-900 border border-neutral-800 rounded-md py-3 px-4 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 focus:ring-1 focus:ring-neutral-600 resize-none min-h-[50px] max-h-[150px]"
                             />
                             <button
                                 type="submit"
-                                disabled={isLoading || !inputText.trim()}
+                                disabled={isLoading || isTriaging || !inputText.trim()}
                                 className="bg-neutral-200 hover:bg-white text-neutral-950 px-4 py-3 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center h-[50px]"
                             >
                                 <Send className="w-4 h-4" />
                             </button>
                         </form>
                         <div className="text-center mt-3">
-                            <button className="text-xs text-neutral-500 hover:text-neutral-300 uppercase tracking-widest font-semibold border-b border-transparent hover:border-neutral-500 transition-all">
-                                Convert to Action Path
+                            <button
+                                onClick={handleConvertToAction}
+                                disabled={isTriaging || isLoading}
+                                className="text-xs text-neutral-500 hover:text-neutral-300 uppercase tracking-widest font-semibold border-b border-transparent hover:border-neutral-500 transition-all flex items-center justify-center mx-auto gap-2 disabled:opacity-50"
+                            >
+                                {isTriaging && <Loader2 className="w-3 h-3 animate-spin" />}
+                                {isTriaging ? 'Triaging...' : 'Convert to Action Path'}
                             </button>
                         </div>
                     </div>
