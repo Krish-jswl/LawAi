@@ -133,22 +133,26 @@ export default function AdvisoryMode() {
 
             const triageData = await response.json();
 
-            // Bifurcation Routing
-            if (triageData.severity === 'civil') {
-                navigate('/executor', {
-                    state: {
-                        entity: triageData.entity,
-                        fullContext: conversationTranscript,
-                        caseId: caseId // Pass the case ID to the next screen!
-                    }
-                });
+            // PACKAGE ALL DATA FOR THE NEXT SCREEN
+            // We must match the exact JSON keys from Krish's triageAgent.js
+            // PACKAGE ALL DATA FOR THE NEXT SCREEN
+            const routeState = {
+                entity: triageData.entity || "Opposing Party",
+                fullContext: conversationTranscript,
+                caseId: caseId,
+                // THESE 3 MUST MATCH KRISH'S triageAgent.js KEYS EXACTLY:
+                severity: triageData.severityScore || triageData.severity,
+                category: triageData.category || "General Legal Issue",
+                reasoning: triageData.reasoning || "Triage evaluated the conversational context."
+            };
+
+            console.log("SENDING TO EXECUTOR:", routeState); // Add this to debug!
+
+            // Route based on Krish's "mode" key
+            if (triageData.mode === 'executor') {
+                navigate('/executor', { state: routeState });
             } else {
-                navigate('/navigator', {
-                    state: {
-                        fullContext: conversationTranscript,
-                        caseId: caseId
-                    }
-                });
+                navigate('/navigator', { state: routeState });
             }
         } catch (error) {
             console.error("Triage routing failed:", error);

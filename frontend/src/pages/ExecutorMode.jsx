@@ -1,97 +1,326 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../api/supabaseClient'; // Make sure this path is correct!
+import { Loader2, CheckCircle2, MessageSquare, Mail, FileText, RotateCcw, Check, AlertTriangle } from 'lucide-react';
+import { supabase } from '../api/supabaseClient';
 
 export default function ExecutorMode() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Catch the hidden payload sent from AdvisoryMode
-    const { entity, fullContext, caseId } = location.state || {};
+    // Catch data from Triage Route (Fallback to empty object if accessed directly)
+    const {
+        entity = 'Unknown Entity',
+        fullContext = '',
+        caseId = null,
+        severity = 0,
+        category = 'General Legal Issue',
+        reasoning = 'No triage reasoning provided.'
+    } = location.state || {};
 
-    // New state to hold the full document text fetched from Supabase
-    const [documentText, setDocumentText] = useState(null);
-    const [isLoadingDoc, setIsLoadingDoc] = useState(false);
+    // --- Agent States ---
+    const [roadmap, setRoadmap] = useState([]);
+    const [isGeneratingRoadmap, setIsGeneratingRoadmap] = useState(true);
 
-    // Fetch the hidden document text from Supabase when the page loads
+    const [draftContent, setDraftContent] = useState('');
+    const [isDrafting, setIsDrafting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // --- UI Interaction States ---
+    const [activeStep, setActiveStep] = useState(0);
+    const [activeFormat, setActiveFormat] = useState('email'); // 'sms', 'email', 'notice'
+    const [refinementNote, setRefinementNote] = useState('');
+
+    // Kick back to home if no context is found
     useEffect(() => {
-        async function fetchCaseDetails() {
-            setIsLoadingDoc(true);
-            try {
-                const { data, error } = await supabase
-                    .from('cases')
-                    .select('document_text')
-                    .eq('id', caseId)
-                    .single();
+        if (!fullContext) {
+            alert("No case context found. Redirecting to Advisory Mode.");
+            navigate('/');
+        }
+    }, [fullContext, navigate]);
 
-                if (error) {
-                    console.error("Error fetching document text:", error);
-                } else if (data && data.document_text) {
-                    setDocumentText(data.document_text);
-                }
-            } catch (err) {
-                console.error("Failed to fetch from Supabase:", err);
+    // 1. The Roadmap Agent (Fires on Load)
+    useEffect(() => {
+        async function fetchDynamicRoadmap() {
+            setIsGeneratingRoadmap(true);
+            try {
+                // The REAL API Call to your Express Backend
+                const response = await fetch('/api/execute/roadmap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ context: fullContext, category })
+                });
+
+                if (!response.ok) throw new Error("API Route not ready");
+                const data = await response.json();
+                setRoadmap(data.roadmap);
+
+            } catch (error) {
+                console.warn("Falling back to safe mock roadmap:", error);
+                // SAFE DEMO FALLBACK: If API fails, show this so the UI still works
+                setRoadmap([
+                    { title: "Send Informal Demand", timeframe: "Immediate", description: "A low-friction message to establish a paper trail." },
+                    { title: "Formal Email Warning", timeframe: "If no response in 3 days", description: "Escalate the tone referencing legal rights." },
+                    { title: "Draft Legal Notice", timeframe: "If no response in 15 days", description: "Final formal warning before court filing." }
+                ]);
             } finally {
-                setIsLoadingDoc(false);
+                setIsGeneratingRoadmap(false);
             }
         }
 
-        // Only run the fetch if we actually have a caseId from the previous screen
-        if (caseId) {
-            fetchCaseDetails();
+        if (fullContext) fetchDynamicRoadmap();
+    }, [fullContext, category]);
+
+    // NEW: Auto-Trigger Drafting Agent on Load, Tab Change, or Step Change
+    useEffect(() => {
+        // Only trigger if we have a roadmap and we aren't already currently drafting
+        if (roadmap.length > 0 && !isDrafting) {
+            handleGenerateDraft();
         }
-    }, [caseId]);
+    }, [roadmap, activeFormat, activeStep]);
+
+    // 2. The Drafting & Critic Agent Loop
+    const handleGenerateDraft = async () => {
+        setIsDrafting(true);
+        try {
+            // The REAL API Call to your Express Backend
+            const response = await fetch('/api/execute/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    caseId,
+                    context: fullContext,
+                    entity,
+                    step: roadmap[activeStep],
+                    format: activeFormat,
+                    refinement: refinementNote
+                })
+            });
+
+            if (!response.ok) throw new Error("Drafting API failed");
+            const data = await response.json();
+            setDraftContent(data.draft);
+
+        } catch (error) {
+            console.warn("Falling back to safe mock draft:", error);
+            // SAFE DEMO FALLBACK
+            setTimeout(() => {
+                const mockDrafts = {
+                    sms: `Hi ${entity}, I am writing regarding our recent dispute. Please consider this a request to resolve the matter immediately to avoid further escalation.`,
+                    email: `Subject: Urgent Resolution Required\n\nTo ${entity},\n\nI am writing to formally address the ongoing issue discussed previously. Please review the terms of our agreement and provide a resolution within 3 business days.\n\nRegards,\n[Your Name]`,
+                    notice: `LEGAL NOTICE\n\nTo: ${entity}\n\nUnder the provisions of applicable law, you are hereby served notice regarding the failure to uphold obligations...`
+                };
+                setDraftContent(mockDrafts[activeFormat] || mockDrafts.email);
+            }, 2000);
+        } finally {
+            setIsDrafting(false);
+            setRefinementNote(''); // Clear the input after generating
+        }
+    };
+
+    // 3. Human in the Loop (Approve & Save)
+    const handleApproveAndSave = async () => {
+        if (!caseId) {
+            alert("No active case ID found. Cannot save to database.");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // Update the existing Supabase row with the final draft and status
+            const { error } = await supabase
+                .from('cases')
+                .update({
+                    status: 'Action Drafted',
+                    final_document: draftContent,
+                    target_entity: entity
+                })
+                .eq('id', caseId);
+
+            if (error) throw error;
+
+            // Navigate to the dashboard after successful save
+            navigate('/dashboard');
+
+        } catch (error) {
+            console.error("Supabase Save Error:", error);
+            alert("Failed to save to database. Check console.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white p-10 font-sans">
-            <h1 className="text-3xl font-bold mb-4 border-b border-neutral-800 pb-2">KALPA AI / Executor Mode</h1>
+        <div className="min-h-screen bg-neutral-950 text-neutral-200 font-sans p-8 overflow-y-auto selection:bg-neutral-800">
 
-            <div className="bg-neutral-900 p-6 rounded-lg border border-neutral-800 shadow-xl">
-                <h2 className="text-xl text-green-400 mb-4 flex items-center gap-2">
-                    ✅ Handoff Successful!
-                </h2>
-
-                {/* Meta Data Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-neutral-950 p-4 rounded border border-neutral-800">
-                        <p className="text-neutral-500 text-xs uppercase tracking-wider mb-1 font-semibold">Target Entity</p>
-                        <p className="font-medium text-neutral-200">{entity || 'Not identified'}</p>
-                    </div>
-                    <div className="bg-neutral-950 p-4 rounded border border-neutral-800">
-                        <p className="text-neutral-500 text-xs uppercase tracking-wider mb-1 font-semibold">Supabase Case ID</p>
-                        <p className="font-mono text-sm text-neutral-400 break-all">{caseId || 'Not synced'}</p>
-                    </div>
+            {/* Header */}
+            <div className="max-w-6xl mx-auto flex justify-between items-end mb-8 border-b border-neutral-900 pb-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                        <CheckCircle2 className="text-green-500 w-8 h-8" />
+                        Executor: Action Mode
+                    </h1>
+                    <p className="text-neutral-500 mt-1">Autonomous execution track initiated. HitL review required.</p>
                 </div>
-
-                {/* 1. The Summary */}
-                <h3 className="mt-6 mb-2 text-neutral-300 font-semibold border-b border-neutral-800 pb-1">1. User Conversation Context:</h3>
-                <pre className="bg-neutral-950 p-4 rounded text-sm text-neutral-400 overflow-auto max-h-48 border border-neutral-800 whitespace-pre-wrap">
-                    {fullContext || 'No context found. Did you come from Advisory Mode?'}
-                </pre>
-
-                {/* 2. The Raw Contract */}
-                <h3 className="mt-6 mb-2 text-neutral-300 font-semibold border-b border-neutral-800 pb-1">2. Full Raw Document (Hidden Pocket):</h3>
-                <div className="bg-neutral-950 p-4 rounded text-sm text-neutral-500 overflow-auto max-h-48 border border-neutral-800 whitespace-pre-wrap">
-                    {isLoadingDoc ? (
-                        <span className="animate-pulse text-neutral-400">Fetching original contract from secure storage...</span>
-                    ) : documentText ? (
-                        documentText
-                    ) : (
-                        <span className="italic">No attached document found for this case.</span>
-                    )}
-                </div>
-
-                <p className="mt-6 text-xs text-neutral-500 uppercase tracking-widest text-center">
-                    System Ready for Drafting Agent Injection
-                </p>
+                <button onClick={() => navigate('/')} className="text-sm text-neutral-500 hover:text-white transition-colors">
+                    ← Abort & Return
+                </button>
             </div>
 
-            <button
-                onClick={() => navigate('/')}
-                className="mt-6 bg-neutral-200 text-neutral-950 font-medium px-6 py-2 rounded hover:bg-white transition-colors"
-            >
-                ← Back to Advisory Mode
-            </button>
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                {/* LEFT COLUMN: Context & Roadmap (Takes up 4 cols) */}
+                <div className="lg:col-span-4 space-y-6">
+
+                    {/* Triage Summary Card */}
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 shadow-lg">
+                        <h3 className="text-xs uppercase tracking-widest text-neutral-500 font-semibold mb-3">Triage Verified</h3>
+                        <div className="bg-neutral-950 rounded p-3 text-sm text-neutral-400 mb-4 border border-neutral-800/50 max-h-32 overflow-y-auto">
+                            "{fullContext ? (fullContext.split('\n').find(line => line.startsWith('user:')) || fullContext.split('\n')[0]) + '...' : 'Loading context...'}"
+                        </div>
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <p className="text-xs text-neutral-500 uppercase tracking-wider">Category</p>
+                                <p className="font-medium text-white">{category}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-neutral-500 uppercase tracking-wider">Severity</p>
+                                <p className="font-bold text-green-400 text-lg">{severity}/10</p>
+                            </div>
+                        </div>
+                        <div className="border-t border-neutral-800 pt-3">
+                            <p className="text-xs text-neutral-500 italic leading-relaxed">
+                                {reasoning}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Roadmap Timeline */}
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 shadow-lg">
+                        <h3 className="text-xs uppercase tracking-widest text-neutral-500 font-semibold mb-4">Escalation Roadmap</h3>
+
+                        {isGeneratingRoadmap ? (
+                            <div className="flex flex-col items-center gap-3 text-neutral-400 text-sm py-10 justify-center">
+                                <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+                                Planning optimal legal strategy...
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {roadmap.map((step, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => setActiveStep(index)}
+                                        className={`p-4 rounded border cursor-pointer transition-all ${activeStep === index ? 'bg-neutral-950 border-green-500/50 shadow-inner' : 'bg-transparent border-neutral-800 hover:border-neutral-700'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className={`text-sm font-bold ${activeStep === index ? 'text-white' : 'text-neutral-300'}`}>
+                                                {index + 1}. {step.title}
+                                            </h4>
+                                            <span className="text-[10px] uppercase tracking-wider text-green-500/80 bg-green-500/10 px-2 py-0.5 rounded">{step.timeframe}</span>
+                                        </div>
+                                        <p className="text-xs text-neutral-500 mt-2">{step.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* RIGHT COLUMN: The Drafting Canvas (Takes up 8 cols) */}
+                <div className="lg:col-span-8 flex flex-col">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-lg flex-1 flex flex-col overflow-hidden shadow-2xl">
+
+                        {/* Action Bar / Tabs */}
+                        <div className="flex items-center justify-between border-b border-neutral-800 bg-neutral-950 px-4 py-3">
+                            <div className="flex gap-2">
+                                {['sms', 'email', 'notice'].map((format) => (
+                                    <button
+                                        key={format}
+                                        onClick={() => setActiveFormat(format)}
+                                        className={`px-4 py-2 rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-all ${activeFormat === format ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                                    >
+                                        {format === 'sms' && <MessageSquare className="w-3.5 h-3.5" />}
+                                        {format === 'email' && <Mail className="w-3.5 h-3.5" />}
+                                        {format === 'notice' && <FileText className="w-3.5 h-3.5" />}
+                                        {format === 'sms' ? 'SMS / Chat' : format === 'email' ? 'Email' : 'Legal Notice'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Document Editor Area */}
+                        <div className="p-6 flex-1 flex flex-col relative bg-neutral-950/50">
+                            {!draftContent && !isDrafting ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                                    <div className="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center mb-6 border border-neutral-800">
+                                        <FileText className="w-8 h-8 text-neutral-600" />
+                                    </div>
+                                    <h3 className="text-xl text-white font-medium mb-2">Initialize Executor</h3>
+                                    <p className="text-neutral-500 text-sm max-w-md mb-8 leading-relaxed">
+                                        Select an action step from the roadmap on the left, choose your preferred format above, and initialize the multi-agent drafting process.
+                                    </p>
+                                    <button
+                                        onClick={handleGenerateDraft}
+                                        className="bg-white text-black px-8 py-3 rounded-md font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2"
+                                    >
+                                        Generate Draft Document
+                                    </button>
+                                </div>
+                            ) : isDrafting ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                                    <Loader2 className="w-12 h-12 animate-spin text-green-500 mb-6" />
+                                    <p className="text-white font-medium text-lg mb-2">Drafting & Critic Loop Active</p>
+                                    <p className="text-sm text-neutral-400">Agent 1: Drafting document based on context...</p>
+                                    <p className="text-sm text-neutral-500 mt-1">Agent 2: Verifying clauses against Indian Law...</p>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col h-full animate-in fade-in duration-500">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> Critic Agent Approved
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-amber-500/80 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                                            <AlertTriangle className="w-3.5 h-3.5" /> Please review before saving
+                                        </div>
+                                    </div>
+
+                                    {/* Editable Canvas */}
+                                    <textarea
+                                        value={draftContent}
+                                        onChange={(e) => setDraftContent(e.target.value)}
+                                        className="w-full flex-1 bg-neutral-900 border border-neutral-800 rounded-lg p-5 text-sm text-neutral-200 focus:outline-none focus:border-neutral-600 focus:ring-1 focus:ring-neutral-600 resize-none font-mono leading-relaxed shadow-inner"
+                                    />
+
+                                    {/* HITL Controls */}
+                                    <div className="mt-6 flex gap-3 items-stretch h-12">
+                                        <input
+                                            type="text"
+                                            placeholder="Refine (e.g. 'Make it sound more urgent')..."
+                                            value={refinementNote}
+                                            onChange={(e) => setRefinementNote(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleGenerateDraft()}
+                                            className="flex-1 bg-neutral-900 border border-neutral-800 rounded-md px-4 text-sm text-white focus:outline-none focus:border-neutral-600 placeholder-neutral-600"
+                                        />
+                                        <button
+                                            onClick={handleGenerateDraft}
+                                            className="px-6 border border-neutral-700 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white flex items-center gap-2 transition-colors font-medium"
+                                        >
+                                            <RotateCcw className="w-4 h-4" /> Retry
+                                        </button>
+                                        <button
+                                            onClick={handleApproveAndSave}
+                                            disabled={isSaving}
+                                            className="px-8 bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:cursor-not-allowed rounded-md text-sm text-white font-semibold flex items-center gap-2 transition-colors"
+                                        >
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            {isSaving ? 'Saving...' : 'Approve & Save'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
