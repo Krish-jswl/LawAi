@@ -126,11 +126,11 @@ export default function ExecutorMode() {
 
         setIsSaving(true);
         try {
-            // Update the existing Supabase row with the final draft and status
+            // 1. Save to Supabase for your records
             const { error } = await supabase
                 .from('cases')
                 .update({
-                    status: 'Action Drafted',
+                    status: 'Action Executed',
                     final_document: draftContent,
                     target_entity: entity
                 })
@@ -138,17 +138,27 @@ export default function ExecutorMode() {
 
             if (error) throw error;
 
-            // Navigate to the dashboard after successful save
+            // 2. Format the components for a URL
+            const subject = encodeURIComponent(`Legal Notice: ${category} regarding ${entity}`);
+            const body = encodeURIComponent(draftContent);
+
+            // 3. Construct the specific Gmail Compose URL
+            // 'view=cm' stands for Compose Mode, 'fs=1' stands for Full Screen
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=&su=${subject}&body=${body}`;
+
+            // 4. Open Gmail in a new browser tab
+            window.open(gmailUrl, '_blank');
+
+            // 5. Navigate the current tab back to your dashboard
             navigate('/dashboard');
 
         } catch (error) {
-            console.error("Supabase Save Error:", error);
-            alert("Failed to save to database. Check console.");
+            console.error("Execution Error:", error);
+            alert("Failed to save or redirect. Check your Supabase connection.");
         } finally {
             setIsSaving(false);
         }
     };
-
     return (
         <div className="min-h-screen bg-neutral-950 text-neutral-200 font-sans p-8 overflow-y-auto selection:bg-neutral-800">
 
@@ -309,10 +319,10 @@ export default function ExecutorMode() {
                                         <button
                                             onClick={handleApproveAndSave}
                                             disabled={isSaving}
-                                            className="px-8 bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:cursor-not-allowed rounded-md text-sm text-white font-semibold flex items-center gap-2 transition-colors"
+                                            className="px-8 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 rounded-md text-sm text-white font-semibold flex items-center gap-2 transition-colors shadow-lg"
                                         >
-                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                            {isSaving ? 'Saving...' : 'Approve & Save'}
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                                            {isSaving ? 'Processing...' : 'Approve & Open in Gmail'}
                                         </button>
                                     </div>
                                 </div>
