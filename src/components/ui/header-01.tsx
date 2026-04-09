@@ -20,9 +20,6 @@ import {
 
 const menuItems = [
   { name: "Features", href: "#" },
-  { name: "Solutions", href: "#" },
-  { name: "Pricing", href: "#" },
-  { name: "Contact", href: "#" },
 ];
 
 const Header = () => {
@@ -110,9 +107,6 @@ const Header = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-2 sm:space-y-0">
-                <ModeToggle />
-              </div>
             </div>
           </div>
         </div>
@@ -129,34 +123,16 @@ const components: { title: string; href: string; description: string }[] = [
       "AI-powered contract and document review with instant risk identification.",
   },
   {
-    title: "Risk Assessment",
-    href: "#",
+    title: "Navigator Mode",
+    href: "/navigator",
     description:
       "Automated legal risk scoring with actionable mitigation recommendations.",
   },
   {
-    title: "What-If Scenarios",
-    href: "#",
-    description:
-      "Simulate clause changes to understand downstream legal implications.",
-  },
-  {
-    title: "Legal Pushback",
-    href: "#",
+    title: "Executor Mode",
+    href: "/executor-mode",
     description:
       "Auto-generated redlines and counter-proposals backed by precedent.",
-  },
-  {
-    title: "Compliance Check",
-    href: "#",
-    description:
-      "Cross-reference documents against regulatory frameworks instantly.",
-  },
-  {
-    title: "API Access",
-    href: "#",
-    description:
-      "Integrate autonomous legal review directly into your existing workflows.",
   },
 ];
 
@@ -175,34 +151,13 @@ export function Menus() {
             <a href="#">Features</a>
           </NavigationMenuLink>
         </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "bg-transparent text-xs"
-            )}
-          >
-            <a href="#">Use Cases</a>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "bg-transparent text-xs"
-            )}
-          >
-            <a href="#">Pricing</a>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
+
         <NavigationMenuItem>
           <NavigationMenuTrigger className="bg-transparent text-xs">
             Resources
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="p-2">
-            <ul className="grid gap-3 md:grid-cols-3 max-w-xl lg:w-3xl">
+          <NavigationMenuContent className="p-4 mx-auto">
+            <ul className="grid gap-4 md:grid-cols-3 w-[600px] justify-center mx-auto text-center">
               {components.map((component) => (
                 <ListItem
                   key={component.title}
@@ -226,17 +181,7 @@ export function Menus() {
             <a href="#">Docs</a>
           </NavigationMenuLink>
         </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink
-            asChild
-            className={cn(
-              navigationMenuTriggerStyle(),
-              "bg-transparent text-xs"
-            )}
-          >
-            <a href="#">Contact</a>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
+
       </NavigationMenuList>
     </NavigationMenu>
   );

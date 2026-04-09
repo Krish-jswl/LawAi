@@ -74,10 +74,13 @@ export function HeroSection({
           </p>
 
           {/* Actions */}
-          <div className="relative z-10 flex animate-appear justify-center gap-4 opacity-0 delay-300">
-            <div className="relative z-10 flex animate-appear justify-center gap-4 opacity-0 delay-300">
+          <div className="relative w-full flex justify-center animate-appear opacity-0 delay-300 py-10 mt-4">
+            {/* Premium Uniform Golden Glow Scattering */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/20 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
+            
+            <div className="relative z-10 flex justify-center gap-4">
               {actions.map((action, index) => (
-                <Button key={index} variant={action.variant} size="lg" asChild>
+                <Button key={index} variant={action.variant} size="lg" className="shadow-[0_0_50px_-12px_rgba(245,158,11,0.4)] border border-amber-500/20" asChild>
                   <a
                     href={action.href}
                     className="flex items-center gap-2"
@@ -97,20 +100,20 @@ export function HeroSection({
             <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 {/* Left Image */}
-                <div className="w-full md:w-1/3 shrink-0">
-                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                <div className="w-full md:w-1/2 shrink-0">
+                  <div className="rounded-xl border border-zinc-400/30 overflow-hidden bg-[#1a1a1a] shadow-2xl">
                     <Image
-                      src="/chat-screenshot.png"
+                      src="/interactive-advisory.png"
                       alt="Interactive Advisory Chat"
-                      width={400}
-                      height={400}
-                      className="w-full h-full object-cover"
+                      width={800}
+                      height={600}
+                      className="w-full h-auto object-contain"
                     />
                   </div>
                 </div>
 
                 {/* Right Text Content */}
-                <div className="w-full md:w-2/3 text-left">
+                <div className="w-full md:w-1/2 text-left">
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
                     Interactive advisory
                   </h2>
@@ -125,7 +128,7 @@ export function HeroSection({
             <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 {/* Left Text Content */}
-                <div className="w-full md:w-2/3 text-left">
+                <div className="w-full md:w-1/2 text-left">
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
                     Cognitive document analysis
                   </h2>
@@ -135,14 +138,14 @@ export function HeroSection({
                 </div>
 
                 {/* Right Image */}
-                <div className="w-full md:w-1/3 shrink-0 flex justify-end">
-                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                <div className="w-full md:w-1/2 shrink-0 flex justify-end">
+                  <div className="rounded-xl border border-zinc-400/30 overflow-hidden bg-[#1a1a1a] shadow-2xl w-full max-w-[800px]">
                     <Image
-                      src="/rock.png"
-                      alt="Feature illustration"
-                      width={400}
-                      height={400}
-                      className="w-full h-full object-cover"
+                      src="/cognitive-analysis.png"
+                      alt="Cognitive Document Analysis Screenshot"
+                      width={800}
+                      height={600}
+                      className="w-full h-auto object-contain"
                     />
                   </div>
                 </div>
@@ -153,20 +156,20 @@ export function HeroSection({
             <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 {/* Left Image */}
-                <div className="w-full md:w-1/3 shrink-0">
-                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                <div className="w-full md:w-1/2 shrink-0 flex items-center justify-center">
+                  <div className="rounded-xl border border-zinc-400/30 overflow-hidden bg-[#131118] shadow-2xl w-full max-w-[400px]">
                     <Image
-                      src="/rock.png"
-                      alt="Feature illustration"
-                      width={400}
+                      src="/convert-action.png"
+                      alt="Convert to Action Button"
+                      width={600}
                       height={400}
-                      className="w-full h-full object-cover"
+                      className="w-full h-auto object-contain p-2"
                     />
                   </div>
                 </div>
 
                 {/* Right Text Content */}
-                <div className="w-full md:w-2/3 text-left">
+                <div className="w-full md:w-1/2 text-left">
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
                     &quot;Convert to Action&quot; Method
                   </h2>
@@ -181,7 +184,7 @@ export function HeroSection({
             <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 {/* Left Text Content */}
-                <div className="w-full md:w-2/3 text-left">
+                <div className="w-full md:w-1/2 text-left">
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
                     Triage &amp; Severity Routing
                   </h2>
@@ -191,14 +194,14 @@ export function HeroSection({
                 </div>
 
                 {/* Right Image */}
-                <div className="w-full md:w-1/3 shrink-0 flex justify-end">
-                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                <div className="w-full md:w-1/2 shrink-0 flex justify-center">
+                  <div className="rounded-xl border border-zinc-400/30 overflow-hidden bg-[#131118] shadow-2xl w-full max-w-[500px]">
                     <Image
-                      src="/rock.png"
-                      alt="Feature illustration"
-                      width={400}
-                      height={400}
-                      className="w-full h-full object-cover"
+                      src="/triage-card.png"
+                      alt="Triage Score Screenshot"
+                      width={600}
+                      height={600}
+                      className="w-full h-auto object-contain p-2"
                     />
                   </div>
                 </div>
@@ -209,20 +212,20 @@ export function HeroSection({
             <div className="rounded-2xl bg-[#f5f0e8] dark:bg-[#f5f0e8] p-8 md:p-12 animate-appear opacity-0 delay-700">
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 {/* Left Image */}
-                <div className="w-full md:w-1/3 shrink-0">
-                  <div className="aspect-square max-w-[220px] rounded-xl border-2 border-zinc-400 overflow-hidden bg-white">
+                <div className="w-full md:w-1/2 shrink-0 flex justify-center">
+                  <div className="rounded-xl border border-zinc-400/30 overflow-hidden bg-[#131118] shadow-2xl w-full max-w-[500px]">
                     <Image
-                      src="/rock.png"
-                      alt="Feature illustration"
-                      width={400}
-                      height={400}
-                      className="w-full h-full object-cover"
+                      src="/action-pipeline.png"
+                      alt="Action Pipeline Tracker"
+                      width={600}
+                      height={600}
+                      className="w-full h-auto object-contain p-2"
                     />
                   </div>
                 </div>
 
                 {/* Right Text Content */}
-                <div className="w-full md:w-2/3 text-left">
+                <div className="w-full md:w-1/2 text-left">
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
                     Autonomous Escalation Tracking (Human-in-the-Loop)
                   </h2>
